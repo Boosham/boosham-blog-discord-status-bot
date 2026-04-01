@@ -2,6 +2,19 @@
 //  Discord Status-Page Bot  ·  Powered by Cronitor API
 // ─────────────────────────────────────────────────────────────
 require('dotenv').config();
+const express = require('express');
+const app = express();
+
+// Render te asigna un puerto automáticamente en process.env.PORT
+const port = process.env.PORT || 10000;
+
+app.get('/', (req, res) => {
+  res.send('Bot de Boosham Online 🚀');
+});
+
+app.listen(port, () => {
+  console.log(`Servidor web escuchando en el puerto ${port}`);
+});
 
 const {
   Client,
@@ -24,8 +37,8 @@ if (!DISCORD_TOKEN || !CRONITOR_API_KEY) {
 
 // ── Constants ────────────────────────────────────────────────
 const CRONITOR_URL   = 'https://cronitor.io/api/monitors/8Pp07A?env=production';
-const EMBED_COLOR    = 0xFFD700; // Amarillo / Gold
-const BUTTON_ID      = 'refresh_status';
+const EMBED_COLOR    = 720640; // #0AFB80
+const BUTTON_ID      = 'p_286642288384282625';
 
 // ── Region labels (AWS region → human-readable) ──────────────
 const REGION_LABELS = {
@@ -63,83 +76,43 @@ async function fetchCronitorStatus() {
 //  Build the status embed from the API response
 // ─────────────────────────────────────────────────────────────
 function buildStatusEmbed(data) {
-  const name      = data.name            ?? 'Unknown';
-  const passing   = data.passing         ?? false;
-  const platform  = data.platform        ?? '—';
-  const url       = data.request?.url    ?? '—';
-
-  // Latest event info
-  const duration   = data.latest_event?.metrics?.duration ?? null;
-  const host       = data.latest_event?.host              ?? '—';
-  const regionName = REGION_LABELS[host] || host;
-
-  // SSL info
-  const sslExpires = data.attributes?.site?.ssl?.expires_at ?? null;
-  const sslIssuer  = data.attributes?.site?.ssl?.issued_by  ?? '—';
-
-  // Status formatting
+  const passing = data.passing ?? false;
   const statusIcon = passing ? '🟢' : '🔴';
   const statusText = passing ? 'Operativo' : 'Caído';
-
-  // Duration formatting
-  const durationText = duration !== null
-    ? `${(duration * 1000).toFixed(0)} ms`
-    : '—';
-
-  // SSL expiration formatting
-  let sslText = '—';
-  if (sslExpires) {
-    const expiresDate = new Date(sslExpires);
-    const now         = new Date();
-    const daysLeft    = Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24));
-    const dateStr     = expiresDate.toLocaleDateString('es-ES', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-    sslText = `${dateStr}  (${daysLeft} días restantes)`;
-  }
+  
+  // Usamos el status global para las regiones ya que el monitor representa el estado general
+  const regionalStatus = `${statusIcon} ${statusText}`;
 
   const embed = new EmbedBuilder()
-    .setTitle(`📊  Panel de Estado — ${name}`)
+    .setTitle('Estado de Pagina Web - Boosham Blog')
+    .setDescription(`Puedes Mirar el Status Detallado [AQUI](https://cronitor.io/monitors/8Pp07A)\n\nDisponibilidad global y estado de conectividad del portal web:`)
     .setColor(EMBED_COLOR)
-    .setDescription(
-      `Estado actual del monitor **${name}** consultado desde la API de Cronitor.`
-    )
     .addFields(
       {
-        name: '🔗  URL Monitoreada',
-        value: `[${url}](${url})`,
-        inline: false,
+        name: '\u200B',
+        value: '\u200B',
+        inline: false
       },
       {
-        name: '📡  Estado',
-        value: `${statusIcon}  **${statusText}**`,
-        inline: true,
+        name: '🇦🇺 Sydney, Australia',
+        value: `- ${regionalStatus}`,
+        inline: false
       },
       {
-        name: '⚙️  Plataforma',
-        value: platform.toUpperCase(),
-        inline: true,
+        name: '🇧🇷 São Paulo, Brazil',
+        value: `- ${regionalStatus}`,
+        inline: false
       },
       {
-        name: '⏱️  Latencia',
-        value: `\`${durationText}\``,
-        inline: true,
+        name: '🇩🇪 Frankfurt, Germany',
+        value: `- ${regionalStatus}`,
+        inline: false
       },
       {
-        name: '🌍  Región del Ping',
-        value: regionName,
-        inline: true,
-      },
-      {
-        name: '🔒  Expiración SSL',
-        value: sslText,
-        inline: true,
-      },
-      {
-        name: '🏢  Emisor SSL',
-        value: sslIssuer,
-        inline: true,
-      },
+        name: '🇺🇸 Virginia, USA',
+        value: `- ${regionalStatus}`,
+        inline: false
+      }
     )
     .setFooter({ text: 'Última actualización' })
     .setTimestamp();
@@ -153,7 +126,7 @@ function buildStatusEmbed(data) {
 function buildButtonRow() {
   const button = new ButtonBuilder()
     .setCustomId(BUTTON_ID)
-    .setLabel('🔄 Actualizar')
+    .setLabel('Actualizar')
     .setStyle(ButtonStyle.Primary);
 
   return new ActionRowBuilder().addComponents(button);
