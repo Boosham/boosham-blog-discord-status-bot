@@ -2,19 +2,6 @@
 //  Discord Status-Page Bot  ·  Powered by Cronitor API
 // ─────────────────────────────────────────────────────────────
 require('dotenv').config();
-const express = require('express');
-const app = express();
-
-// Render te asigna un puerto automáticamente en process.env.PORT
-const port = process.env.PORT || 10000;
-
-app.get('/', (req, res) => {
-  res.send('Bot de Boosham Online 🚀');
-});
-
-app.listen(port, () => {
-  console.log(`Servidor web escuchando en el puerto ${port}`);
-});
 
 const {
   Client,
