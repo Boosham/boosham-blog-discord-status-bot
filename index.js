@@ -24,17 +24,11 @@ if (!DISCORD_TOKEN || !CRONITOR_API_KEY) {
 
 // ── Constants ────────────────────────────────────────────────
 const CRONITOR_URL   = 'https://cronitor.io/api/monitors/8Pp07A?env=production';
-const EMBED_COLOR    = 720640; // #0AFB80
+const EMBED_COLOR    = 1633029; // #18EB05 (Nuevo color según JSON)
 const BUTTON_ID      = 'p_286642288384282625';
+const CHANNEL_ID     = '1489026084602122434'; // Canal fijo de status
 
-// ── Region labels (AWS region → human-readable) ──────────────
-const REGION_LABELS = {
-  'us-east-1':      '🇺🇸 US East (Virginia)',
-  'us-west-1':      '🇺🇸 US West (California)',
-  'eu-central-1':   '🇩🇪 EU Central (Frankfurt)',
-  'ap-southeast-2': '🇦🇺 AP Southeast (Sydney)',
-  'sa-east-1':      '🇧🇷 SA East (São Paulo)',
-};
+// (REGION_LABELS ya no es necesario con el nuevo diseño)
 
 // ── Discord client ───────────────────────────────────────────
 const client = new Client({
@@ -64,45 +58,38 @@ async function fetchCronitorStatus() {
 // ─────────────────────────────────────────────────────────────
 function buildStatusEmbed(data) {
   const passing = data.passing ?? false;
-  const statusIcon = passing ? '🟢' : '🔴';
-  const statusText = passing ? 'Operativo' : 'Caído';
-  
-  // Usamos el status global para las regiones ya que el monitor representa el estado general
-  const regionalStatus = `${statusIcon} ${statusText}`;
 
   const embed = new EmbedBuilder()
-    .setTitle('Estado de Pagina Web - Boosham Blog')
-    .setDescription(`Puedes Mirar el Status Detallado [AQUI](https://cronitor.io/monitors/8Pp07A)\n\nDisponibilidad global y estado de conectividad del portal web:`)
-    .setColor(EMBED_COLOR)
-    .addFields(
-      {
-        name: '\u200B',
-        value: '\u200B',
-        inline: false
-      },
-      {
-        name: '🇦🇺 Sydney, Australia',
-        value: `- ${regionalStatus}`,
-        inline: false
-      },
-      {
-        name: '🇧🇷 São Paulo, Brazil',
-        value: `- ${regionalStatus}`,
-        inline: false
-      },
-      {
-        name: '🇩🇪 Frankfurt, Germany',
-        value: `- ${regionalStatus}`,
-        inline: false
-      },
-      {
-        name: '🇺🇸 Virginia, USA',
-        value: `- ${regionalStatus}`,
-        inline: false
-      }
-    )
-    .setFooter({ text: 'Última actualización' })
-    .setTimestamp();
+    .setTitle('Status de Paginas Web')
+    .setColor(EMBED_COLOR);
+
+  if (passing) {
+    embed.setDescription(
+      "Puedes Mirar el Status Detallado  (AQUI https://booshamblog.alwaysdata.net/)\n\n" +
+      "Disponibilidad en Diferentes Partes del Mundo:\n\n" +
+      "🇦🇺 Sydney, Australia          \n" +
+      " <:circle_check:1496341223559004271>  Operativo\n\n" +
+      "🇧🇷 São Paulo, Brazil\n" +
+      " <:circle_check:1496341223559004271>  Operativo\n\n" +
+      "🇩🇪 Frankfurt, Germany\n" +
+      " <:circle_check:1496341223559004271>  Operativo\n\n" +
+      "🇺🇸 Virginia, USA\n" +
+      " <:circle_check:1496341223559004271>  Operativo"
+    );
+  } else {
+    embed.setDescription(
+      "Puedes Mirar el Status Detallado  (AQUI https://booshamblog.alwaysdata.net/)\n\n" +
+      "Disponibilidad en Diferentes Partes del Mundo:\n\n" +
+      "🇦🇺 Sydney, Australia          \n" +
+      " <:circle_x:1496343329594675291>  Caido (Ping)\n\n" +
+      "🇧🇷 São Paulo, Brazil\n" +
+      "  <:circle_x:1496343329594675291>  Caido (Ping)\n\n" +
+      "🇩🇪 Frankfurt, Germany\n" +
+      "  <:circle_x:1496343329594675291>  Caido (Ping)\n\n" +
+      "🇺🇸 Virginia, USA\n" +
+      "  <:circle_x:1496343329594675291>  Caido (Ping)"
+    );
+  }
 
   return embed;
 }
@@ -134,10 +121,41 @@ function buildErrorEmbed(errorMessage) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Event: Ready
+//  Auto-update logic for the fixed channel
 // ─────────────────────────────────────────────────────────────
+async function updateStatusInChannel() {
+  try {
+    const channel = await client.channels.fetch(CHANNEL_ID);
+    if (!channel) return console.error(`❌ No se encontró el canal ${CHANNEL_ID}`);
+
+    const data = await fetchCronitorStatus();
+    const embed = buildStatusEmbed(data);
+    const row = buildButtonRow();
+
+    // Buscar el último mensaje enviado por el bot en ese canal
+    const messages = await channel.messages.fetch({ limit: 10 });
+    const lastBotMessage = messages.find(m => m.author.id === client.user.id);
+
+    if (lastBotMessage) {
+      await lastBotMessage.edit({ embeds: [embed], components: [row] });
+      console.log('✅ Status actualizado en el canal fijo (Editado).');
+    } else {
+      await channel.send({ embeds: [embed], components: [row] });
+      console.log('✅ Status enviado al canal fijo (Nuevo mensaje).');
+    }
+  } catch (err) {
+    console.error('❌ Error actualizando status automático:', err.message);
+  }
+}
+
 client.once('ready', () => {
   console.log(`✅  Bot conectado como ${client.user.tag}`);
+  
+  // Ejecutar actualización inicial
+  updateStatusInChannel();
+  
+  // Programar actualización cada 5 minutos
+  setInterval(updateStatusInChannel, 5 * 60 * 1000);
 });
 
 // ─────────────────────────────────────────────────────────────
